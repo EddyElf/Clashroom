@@ -2,40 +2,88 @@ document.addEventListener("DOMContentLoaded", function () {
     // Load sounds
     const sounds = {
         intro: new Audio("intro.mp3"), 
-        trumpets: new Audio("trumpets.mp3"), // provided by kebp888 on freesound.org
-        alert: new Audio("alert.mp3"), // provided by breviceps on freesound.org
-        explosion: new Audio("explosion.mp3"), // provided by cgeffex on freesound.org
-        drumcrash: new Audio("drumcrash.mp3") // provided by collinb1000 and sorinious_genious on freesound.org
+        trumpets: new Audio("trumpets.mp3"), 
+        alert: new Audio("alert.mp3"), 
+        explosion: new Audio("explosion.mp3"), 
+        drumcrash: new Audio("drumcrash.mp3") 
     };
 
-    // Attempt to play intro.mp3
-    sounds.intro.play().catch(error => {
-        console.log("Autoplay blocked. Waiting for user interaction.");
-    });
+    const teamButtonsContainer = document.getElementById("team-buttons");
+    const welcomeScreen = document.getElementById("welcome-screen");
+    const gameInterface = document.getElementById("game-interface");
+    const gameGrid = document.getElementById("game-grid");
 
-    let isResetting = false; // Flag to disable drumcrash sound during reset
-    let isInitializing = true; // Flag to prevent drumcrash during setup
-
-    document.querySelectorAll(".grid-item").forEach((item) => {
-        for (let i = 0; i < 6; i++) {
-            createCap(item);
-        }
-        updateCounters(item); // Ensure the initial counter is set
-    });
-
-    setTimeout(() => {
-        isInitializing = false; // Allow normal sound behavior after setup
-    }, 100);
-
+    let isResetting = false; 
+    let isInitializing = true; 
     let draggedItem = null;
     let sourceContainer = null;
+    let chosenTeamCount = 3; 
 
-    function createCap(container) {
-        const cap = document.createElement("span");
-        cap.textContent = "🎓";
-        cap.classList.add("draggable");
-        cap.setAttribute("draggable", "true");
+    // EXACT COLOR MAPS EXTRACTED FROM YOUR HTML FILES
+    const colorConfigs = {
+        3: ["purple", "green", "yellow"],
+        4: ["purple", "green", "rgb(18, 18, 162)", "rgb(255, 0, 0, 0.891)"],
+        5: ["purple", "green", "yellow", "rgba(255, 166, 1, 0.925)", "rgb(91, 49, 7)"],
+        6: ["purple", "green", "yellow", "rgba(255, 166, 1, 0.925)", "rgb(18, 18, 162)", "rgb(255, 0, 0, 0.891)"],
+        7: ["purple", "green", "yellow", "rgba(255, 166, 1, 0.925)", "rgb(91, 49, 7)", "rgb(18, 18, 162)", "rgb(255, 0, 0, 0.891)"],
+        8: ["purple", "green", "yellow", "rgba(255, 166, 1, 0.925)", "rgb(91, 49, 7)", "rgb(18, 18, 162)", "rgb(255, 0, 0, 0.891)", "grey"],
+        9: ["purple", "green", "yellow", "rgba(255, 166, 1, 0.925)", "rgb(91, 49, 7)", "rgb(18, 18, 162)", "rgb(255, 0, 0, 0.891)", "grey", "rgb(255, 167, 218)"]
+    };
 
+    // GENERATE MENU BUTTONS
+    for (let i = 3; i <= 9; i++) {
+        let button = document.createElement("button");
+        button.textContent = `${i} Teams`;
+        button.addEventListener("click", function() {
+            chosenTeamCount = i;
+            startGame(i);
+        });
+        teamButtonsContainer.appendChild(button);
+    }
+
+    // TRANSITION FROM MENU TO GAMEBOARD
+    function startGame(teamCount) {
+        sounds.intro.play().catch(error => console.log("Audio block error:", error));
+        document.getElementById("theme-stylesheet").href = `styles${teamCount}.css`;
+        welcomeScreen.style.display = "none";
+        gameInterface.style.display = "block";
+        buildGameBoard(teamCount);
+    }
+
+    // DYNAMICALLY BUILD THE GRID ITEMS
+    function buildGameBoard(teamCount) {
+        gameGrid.innerHTML = ""; 
+        isInitializing = true;
+
+        const activeColors = colorConfigs[teamCount];
+
+        for (let i = 0; i < teamCount; i++) {
+            const item = document.createElement("div");
+            item.classList.add("grid-item");
+            item.style.backgroundColor = activeColors[i];
+
+            const counter = document.createElement("span");
+            counter.classList.add("counter");
+            counter.textContent = "6";
+            item.appendChild(counter);
+
+            gameGrid.appendChild(item);
+            setupGridDropListeners(item);
+
+            for (let j = 0; j < 6; j++) {
+                createCap(item);
+            }
+            updateCounters(item); 
+        }
+
+        setTimeout(() => {
+            isInitializing = false; 
+        }, 100);
+    }
+
+    // NEW HELPER: Binds both Mouse Drag AND Touchscreen listeners to any Cap
+    function bindCapEvents(cap) {
+        // --- MOUSE DRAG EVENTS (Desktop) ---
         cap.addEventListener("dragstart", function (event) {
             draggedItem = event.target;
             sourceContainer = event.target.parentElement;
@@ -49,6 +97,87 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
 
+        // --- TOUCH SCREEN EVENTS (iPad / ViewSonic / Smart Board) ---
+        cap.addEventListener("touchstart", function (event) {
+            draggedItem = event.target;
+            sourceContainer = event.target.parentElement;
+            draggedItem.style.opacity = "0.5";
+            
+            // Switch item to fixed positioning so it can float over elements smoothly
+            draggedItem.style.position = "fixed";
+            draggedItem.style.zIndex = "1000";
+            
+            let touch = event.touches[0];
+            // Center the cap emoji under the user's finger point (~15px offset assumes a standard size)
+            draggedItem.style.left = (touch.clientX - 15) + "px";
+            draggedItem.style.top = (touch.clientY - 15) + "px";
+        });
+
+        cap.addEventListener("touchmove", function (event) {
+            // CRITICAL: Stops the touchscreen from scrolling or bouncing while moving a cap
+            event.preventDefault(); 
+            if (!draggedItem) return;
+            
+            let touch = event.touches[0];
+            draggedItem.style.left = (touch.clientX - 15) + "px";
+            draggedItem.style.top = (touch.clientY - 15) + "px";
+        }, { passive: false });
+
+        cap.addEventListener("touchend", function (event) {
+            if (!draggedItem) return;
+
+            // Clear temporary styling so the element can snap cleanly into standard HTML layout containers
+            draggedItem.style.position = "";
+            draggedItem.style.zIndex = "";
+            draggedItem.style.left = "";
+            draggedItem.style.top = "";
+
+            let touch = event.changedTouches[0];
+
+            // Temporarily ignore the cap's own collision layer so we can see what container lies directly underneath it
+            draggedItem.style.pointerEvents = "none";
+            let elementAtPoint = document.elementFromPoint(touch.clientX, touch.clientY);
+            draggedItem.style.pointerEvents = "";
+
+            // Trace upward from the collision point to find valid drop zones
+            let dropTarget = null;
+            if (elementAtPoint) {
+                dropTarget = elementAtPoint.closest(".grid-item") || elementAtPoint.closest("#delete");
+            }
+
+            // Perform matching actions based on the touch targets detected
+            if (dropTarget) {
+                if (dropTarget.id === "delete") {
+                    let parentContainer = draggedItem.parentElement;
+                    draggedItem.remove();
+                    sounds.explosion.play();
+                    if (parentContainer && parentContainer.classList.contains("grid-item")) {
+                        updateCounters(parentContainer);
+                    }
+                } else if (dropTarget.classList.contains("grid-item")) {
+                    dropTarget.appendChild(draggedItem);
+                    if (sourceContainer) {
+                        updateCounters(sourceContainer);
+                    }
+                    updateCounters(dropTarget);
+                }
+            }
+
+            // Reset drag tracking variables cleanly
+            draggedItem.style.opacity = "1";
+            draggedItem = null;
+        });
+    }
+
+    function createCap(container) {
+        const cap = document.createElement("span");
+        cap.textContent = "🎓";
+        cap.classList.add("draggable");
+        cap.setAttribute("draggable", "true");
+
+        // Pass cap through our input processor hook
+        bindCapEvents(cap);
+
         container.appendChild(cap);
         updateCounters(container);
     }
@@ -61,12 +190,12 @@ document.addEventListener("DOMContentLoaded", function () {
             counter.textContent = caps;
 
             if (!isResetting && !isInitializing && caps > prevCount) {
-                sounds.drumcrash.play(); // Play drumcrash sound only after initialization
+                sounds.drumcrash.play(); 
             }
         }
     }
 
-    document.querySelectorAll(".grid-item").forEach((item) => {
+    function setupGridDropListeners(item) {
         item.addEventListener("dragover", function (event) {
             event.preventDefault();
         });
@@ -81,29 +210,20 @@ document.addEventListener("DOMContentLoaded", function () {
                 updateCounters(item);
             }
         });
-    });
+    }
 
+    // CONTROL PANEL ACTIONS
     document.getElementById("new-game").addEventListener("click", function () {
         const newCap = document.createElement("span");
         newCap.textContent = "🎓";
         newCap.classList.add("draggable");
         newCap.setAttribute("draggable", "true");
 
-        newCap.addEventListener("dragstart", function (event) {
-            draggedItem = event.target;
-            sourceContainer = event.target.parentElement;
-            event.target.style.opacity = "0.5";
-        });
-
-        newCap.addEventListener("dragend", function () {
-            if (draggedItem) {
-                draggedItem.style.opacity = "1";
-                draggedItem = null;
-            }
-        });
+        // Fixed: Ensure new caps generated mid-game also get touch behaviors attached!
+        bindCapEvents(newCap);
 
         document.getElementById("new-cap-container").appendChild(newCap);
-        sounds.trumpets.play(); // Play trumpets sound when new is clicked
+        sounds.trumpets.play(); 
     });
 
     document.getElementById("delete").addEventListener("dragover", function (event) {
@@ -115,7 +235,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (draggedItem) {
             let parentContainer = draggedItem.parentElement;
             draggedItem.remove();
-            sounds.explosion.play(); // Play explosion sound when deleted
+            sounds.explosion.play(); 
             if (parentContainer && parentContainer.classList.contains("grid-item")) {
                 updateCounters(parentContainer);
             }
@@ -123,32 +243,20 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     document.getElementById("reset").addEventListener("click", function () {
-        sounds.alert.play(); // Play alert sound immediately
+        sounds.alert.play(); 
 
         setTimeout(() => {
             const confirmReset = confirm("Are you sure you want to reset the gameboard?");
             if (!confirmReset) return;
 
-            isResetting = true; // Disable drumcrash sound during reset
+            isResetting = true; 
+            sounds.intro.play(); 
 
-            document.querySelectorAll(".grid-item").forEach((item) => {
-                while (item.firstChild) {
-                    item.removeChild(item.firstChild);
-                }
-                const counter = document.createElement("span");
-                counter.classList.add("counter");
-                counter.textContent = "6";
-                item.appendChild(counter);
-                sounds.explosion.play();
-                for (let i = 0; i < 6; i++) {
-                    createCap(item);
-                }
-            });
-
+            buildGameBoard(chosenTeamCount);
             document.getElementById("new-cap-container").innerHTML = "";
 
             setTimeout(() => {
-                isResetting = false; // Re-enable drumcrash sound after reset
+                isResetting = false; 
             }, 100);
         }, 100);
     });
