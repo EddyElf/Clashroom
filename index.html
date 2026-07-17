@@ -4,15 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Clashroom</title>
-    <link rel="stylesheet" href="welcome.css">
-    <script defer src="welcome.js"></script>
+    <!-- This ID lets us swap styles later. It starts with your welcome styling. -->
+    <link id="theme-stylesheet" rel="stylesheet" href="welcome.css">
 </head>
 <body>
-    <div class="container">
+
+    <!-- 1. WELCOME SCREEN SECTION -->
+    <!-- This is your exact welcome screen layout from index.html -->
+    <div id="welcome-screen" class="container">
         <h1>WELCOME TO<br>THE CLASHROOM</h1>
         <p>HOW MANY TEAMS WILL BE CLASHING?</p>
-
         <div id="team-buttons"></div>
     </div>
+
+    <!-- 2. GAMEBOARD SECTION -->
+    <!-- This section holds your layout elements, but starts completely hidden -->
+    <div id="game-interface" style="display: none;">
+        <div class="top-row">WELCOME     TO     THE     CLASHROOM</div>
+
+        <!-- This container is left empty because JavaScript will draw the team boxes inside it -->
+        <div class="game-grid" id="game-grid"></div>
+
+        <div class="bottom-row">
+            <div id="new-cap-container"></div>
+            <button id="new-game">Create</button>
+            <button id="delete">Remove</button>
+            <button id="reset">Restart</button>
+        </div>
+    </div>
+
+    <!-- Your gameplay script handles both the menu and the board now -->
+    <script src="script.js"></script>
 </body>
 </html>
