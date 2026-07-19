@@ -4,8 +4,6 @@
     box-sizing: border-box;
 }
 
-
-
 body {
     font-family: Arial, sans-serif;
     text-align: center;
@@ -14,6 +12,7 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
+    height: 100dvh;
     width: 100vw;
     overflow: hidden;  /* Prevents anything from spilling outside */
     background-color: black;
@@ -32,15 +31,14 @@ p {
     margin-bottom: 3vh; /* Adds spacing below each paragraph */
 }
 
-
 .container {
     background: rgb(255, 0, 170);
     padding: 2em;
     border-radius: 6vw;
     box-shadow: 0 .5vw 2vh rgb(12, 161, 206);
     max-width: 90vw;  /* Ensures it never exceeds the screen */
-    max-height: 90vh; /* Keeps it contained */
-    overflow: fixed;   /* Allows scrolling inside if needed */
+    max-height: 90dvh; /* Adjusted to keep it contained safely on mobile screens */
+    overflow-y: auto;  /* Fixed: Corrected to valid property to allow scrolling inside if needed */
 }
 
 button {
